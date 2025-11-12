@@ -58,23 +58,14 @@ This agent solves that by:
 
 ---
 
-## ⚠️ Challenges
-
-- Handling heterogeneous file types (PDFs, scans, Office files)  
-- Ensuring summary accuracy and reducing hallucinations  
-- Providing safe and controllable autonomous updates  
-- Unifying data from Slack, Drive, and local systems  
-
----
-
 ## 🛠️ Roadmap
 
-- [ ] Slack + Drive ingestion connectors  
-- [ ] Update detection pipeline  
-- [ ] Reflection loop for documentation quality  
-- [ ] Version tracking and change suggestions  
-- [ ] MCP tool wrapper for interoperability  
-- [ ] Dashboard for document health analytics  
+-  Slack + Drive ingestion connectors  
+-  Update detection pipeline  
+-  Reflection loop for documentation quality  
+-  Version tracking and change suggestions  
+-  MCP tool wrapper for interoperability  
+-  Dashboard for document health analytics  
 
 ---
 
