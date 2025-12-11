@@ -1,4 +1,9 @@
 # Interlock
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![issues](https://img.shields.io/github/issues/y0ncha/Memora)](https://github.com/y0ncha/Memora/issues)
+[![contributors](https://img.shields.io/github/contributors/y0ncha/Memora)](https://github.com/y0ncha/Memora/graphs/contributors)
+[![release](https://img.shields.io/github/v/release/y0ncha/Memora)](https://github.com/y0ncha/Memora/releases)
+[![stars](https://img.shields.io/github/stars/y0ncha/Memora)](https://github.com/y0ncha/Memora/stargazers)
 
 Interlock is a documentation-governance engine that identifies outdated, duplicated, or low-quality Confluence pages using deterministic scoring and structured LLM evaluation. It provides automated visibility into the health of knowledge bases without modifying content or requiring manual auditing.
 
