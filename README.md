@@ -1,77 +1,48 @@
-# 📚 Documentation Intelligence System
-
-An autonomous agent designed to **generate, organize, and maintain documentation** across connected platforms such as Google Drive, Slack, and local storage systems.  
-The system continuously learns from user interactions, keeps documents up-to-date, and provides a unified, searchable knowledge layer for teams and organizations.
-
 ---
 
-## 🚀 Overview
+## **Expected Challenges in Implementation**
 
-The Documentation Intelligence System acts as a self-updating documentation hub.  
-It automatically:
+### **1. Confluence API limitations and rate constraints**
 
-- Ingests documents from multiple sources (Drive, Slack exports, local files)
-- Summarizes, tags, and embeds content for semantic search
-- Detects outdated or conflicting documentation
-- Suggests or performs updates using reflection and planning
-- Exposes a conversational interface for fast knowledge retrieval
-- Maintains a long-term memory of institutional information
+- Metadata and page-body fetch frequency must respect rate limits.
+- Large enterprise spaces may require batching and optimized crawling.
+- Confluence Cloud vs Server differences may affect connectors.
 
-Built as an **agentic system** using planning, memory, and reflection loops, with optional MCP tools for interoperability with other agents.
+### **2. Scaling deterministic ranking at enterprise size**
 
----
+- Processing tens of thousands of pages requires efficient metadata indexing.
+- Link-graph analysis and duplication detection must remain performant at scale.
+- Ranking must remain stable, deterministic, and explainable.
 
-## 🧩 Architecture (High-Level)
+### **3. Context assembly for LLM evaluation**
 
-- **Agent Framework:** LangGraph / CrewAI  
-- **Connectors:** Google Drive API, Slack Web API, Local FS  
-- **Knowledge Store:** Chroma / PGVector (for embeddings + metadata)  
-- **Pipeline:** OCR → Text Extraction → Embedding → Tagging  
-- **Reasoning Loop:**  
-  - Planning (document tasks, update cycles)  
-  - Reflection (detect errors, stale content, missing docs)  
-  - Memory (semantic store + structured metadata)  
-- **Outputs:** Markdown, Google Docs, Notion pages (coming soon)
+- Choosing the correct structural neighbors and canonical candidates is non-trivial.
+- Over-contextualizing or under-contextualizing may skew LLM scoring.
+- LLM prompt design must minimize hallucination and ensure repeatability.
 
----
+### **4. LLM cost optimization**
 
-## 🔍 Features
+- Evaluating thousands of pages regularly can be expensive.
+- Requires batching, prioritization, and selective evaluation strategies.
 
-- Multi-source document ingestion  
-- RAG-based summarization and document creation  
-- Auto-detection of outdated or duplicated documents  
-- Cross-platform syncing (Drive, Slack, local)  
-- Conversational search interface  
-- Agent-driven update recommendations  
+### **5. Score surfacing inside Confluence**
 
----
+- Must ensure atomic and reliable updates to metadata fields.
+- Comment posting should avoid noise or duplication.
+- Permissions and app-level access need to be configured correctly.
 
-## 🎯 Why This Project?
+### **6. Avoiding false positives and instability in evaluation**
 
-Teams generate knowledge constantly — in chats, meetings, documents, and emails.  
-But documentation becomes **outdated**, **scattered**, and **hard to maintain**.
+- Duplication detection and conflict identification must be robust and explainable.
+- LLM scoring must remain stable across iterations and model upgrades.
 
-This agent solves that by:
-- Acting like an internal technical writer  
-- Continuously capturing and updating knowledge  
-- Keeping documentation reliable, fresh, and accessible  
+### **7. Maintaining continuous evaluation cycles**
 
----
+- Designing a scheduler that balances freshness, throughput, and concurrency.
+- Ensuring evaluation loops do not create overload on Confluence or LLM backends.
 
-## 🛠️ Roadmap
+### **8. Alignment with enterprise AI systems (e.g., Glean)**
 
--  Slack + Drive ingestion connectors  
--  Update detection pipeline  
--  Reflection loop for documentation quality  
--  Version tracking and change suggestions  
--  MCP tool wrapper for interoperability  
--  Dashboard for document health analytics  
-
----
-
-## 👥 Authors
-
-Developed as part of the  
-**Learning Systems and Autonomous Agents Workshop (2025–2026)**  
-at *The Academic College of Tel Aviv–Yaffo*.
-
+- Page scores and diagnostic flags must be consistently formatted and exported.
+- Enterprise search systems may require additional metadata mapping.
+- Must avoid leaking internal evaluation-only fields unintentionally.
