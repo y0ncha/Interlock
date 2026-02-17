@@ -85,10 +85,10 @@ See [Planning Document](docs/Planing.md) for the PoC implementation plan.
 
 The Proof of Concept (PoC) demonstrates agent governance through MCP tool calls:
 
-- ✅ MCP server with `interlock_next_step` tool
-- ✅ Strict Pydantic `Ticket` schema validation
+- ✅ MCP server with `interlock_begin_run` + `interlock_submit_ticket` tools
+- ✅ Strict Pydantic `ticket.json` envelope + per-stage payload validation
 - ✅ 7-step FSM with deterministic state transitions
-- ✅ Validation gates (IntakeGate, ExtractRequirementsGate)
+- ✅ Validation gates for fixable retry vs blocking fail-closed outcomes
 - ✅ Artifact persistence (JSONL storage)
 - ✅ End-to-end demo flow
 
@@ -108,7 +108,7 @@ The Proof of Concept (PoC) demonstrates agent governance through MCP tool calls:
 3. Run unit tests:
    ```bash
    pip install -e ".[dev]"  # Install test dependencies
-   pytest test_interlock.py -v
+   pytest tests/test_ticket_dialog.py -v
    ```
 
 4. Use the MCP server: the **agent** runs the server as an MCP. Configure **command** and **args** in `mcp.json` or `settings.json` (see [RUNNING.md](docs/RUNNING.md)#mcp-configuration-agent-runs-the-server). Example:
@@ -120,7 +120,7 @@ The Proof of Concept (PoC) demonstrates agent governance through MCP tool calls:
 **Testing:**
 See [TESTING.md](TESTING.md) for comprehensive testing instructions.
 
-The demo shows how an agent calls `interlock_next_step` with a `ticket.json`, receives governance instructions (status, next_state, agent_role), and progresses through FSM states. All artifacts are persisted to `interlock_data/`.
+Typical flow: the agent first calls `interlock_begin_run` to receive a clean `ticket.json` at `fetch_ticket`, then repeatedly calls `interlock_submit_ticket` with updated `ticket.json` until `complete` or `fail_closed`.
 
 ---
 

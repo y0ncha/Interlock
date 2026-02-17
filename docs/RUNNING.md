@@ -75,7 +75,7 @@ With a virtualenv and fixed working directory:
 - **Claude Desktop** — e.g. `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS). Same `mcpServers` structure.
 - **Other MCP clients** — Put the same JSON object in the `mcp.json` or `settings.json` location your client documents.
 
-After saving the config, (re)start the client so the agent can use the `interlock_next_step` tool.
+After saving the config, (re)start the client so the agent can use Interlock tools (`interlock_begin_run`, `interlock_submit_ticket`).
 
 ---
 
@@ -119,18 +119,23 @@ async def test_server():
     from interlock.server import mcp
     client = Client(mcp)
     
-    # Create a test ticket
-    ticket = Ticket(
-        ticket_id="TEST-001",
-        title="Test ticket",
-        state="intake",
-        run_id=str(uuid4()),
+    # Begin a run and get clean ticket.json at fetch_ticket
+    begin = await client.call_tool(
+        "interlock_begin_run",
+        {"ticket_id": "TEST-001", "run_id": str(uuid4())}
     )
-    
-    # Call the tool
+    ticket = begin["updated_ticket"]
+
+    # Fill required fields for fetch_ticket and submit
+    ticket["payload"] = {
+        "external_source": "jira",
+        "external_ticket_id": "TEST-001",
+        "title": "Test ticket",
+        "description": "Example description"
+    }
     result = await client.call_tool(
-        "interlock_next_step",
-        {"ticket_json": ticket.to_json()}
+        "interlock_submit_ticket",
+        {"ticket_json": json.dumps(ticket)}
     )
     
     print(json.dumps(result, indent=2))
@@ -148,7 +153,7 @@ python test_client.py
 
 1. Add the Interlock server to your MCP config (see **MCP configuration** above). For Claude Desktop on Mac, the config file is usually `~/Library/Application Support/Claude/claude_desktop_config.json`; use the same `mcpServers.interlock` JSON object with `command` and `args`.
 2. Restart the client.
-3. Use the tool — the agent can call `interlock_next_step` with ticket JSON.
+3. Use the tools — agent first calls `interlock_begin_run`, then loops with `interlock_submit_ticket` using returned `ticket.json`.
 
 ## What Changed
 
@@ -159,15 +164,16 @@ python test_client.py
 
 ## Server Features
 
-The server provides one tool:
+The server provides:
 
-- **`interlock_next_step`**: 
-  - Input: `ticket_json` (string) - JSON representation of a Ticket
-  - Output: Governance response with:
-    - `status`: "pass", "retry", or "stop"
-    - `next_state`: Next FSM state (if status is "pass")
-    - `agent_role`: What the agent should do in the next step
-    - `gate_result`: Validation gate results
+- **`interlock_begin_run`**:
+  - Input: `ticket_id` and optional `run_id`
+  - Output: clean `ticket.json` initialized at `fetch_ticket`
+- **`interlock_submit_ticket`**:
+  - Input: `ticket_json` (string)
+  - Output: updated `ticket.json`, `next_state`, `next_role`, `gate_result`
+- **`interlock_next_step`**:
+  - Backward-compatible alias of `interlock_submit_ticket`
 
 ## Troubleshooting
 

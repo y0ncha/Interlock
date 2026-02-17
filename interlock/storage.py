@@ -1,10 +1,11 @@
-"""Artifact persistence for Interlock."""
+"""Artifact persistence for Interlock ticket.json workflow."""
+
+from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
 
 from interlock.schemas.ticket import Ticket
 
@@ -12,97 +13,64 @@ logger = logging.getLogger(__name__)
 
 
 class ArtifactStore:
-    """Store for persisting tickets and events."""
-    
+    """Store ticket snapshots and events for traceable runs."""
+
     def __init__(self, storage_dir: Path | str = "interlock_data"):
-        """
-        Initialize artifact store.
-        
-        Args:
-            storage_dir: Directory to store artifacts (default: "interlock_data")
-        """
         self.storage_dir = Path(storage_dir)
-        self.storage_dir.mkdir(exist_ok=True)
-        
+        self.storage_dir.mkdir(parents=True, exist_ok=True)
+        self.runs_dir = self.storage_dir / "runs"
+        self.runs_dir.mkdir(parents=True, exist_ok=True)
+
         self.tickets_file = self.storage_dir / "tickets.jsonl"
         self.events_file = self.storage_dir / "events.jsonl"
-        
-        logger.info(f"ArtifactStore initialized at {self.storage_dir}")
-    
+
+    def _run_dir(self, run_id: str) -> Path:
+        run_dir = self.runs_dir / run_id
+        run_dir.mkdir(parents=True, exist_ok=True)
+        return run_dir
+
     def save_ticket(self, ticket: Ticket) -> None:
-        """
-        Save a ticket to storage.
-        
-        Args:
-            ticket: Ticket to save
-        """
-        ticket_data = ticket.model_dump(mode="json")
-        ticket_data["_saved_at"] = datetime.now().isoformat()
-        
-        with open(self.tickets_file, "a", encoding="utf-8") as f:
-            f.write(json.dumps(ticket_data, default=str) + "\n")
-        
-        logger.info(f"Ticket saved: ticket_id={ticket.ticket_id}, state={ticket.state}")
-    
-    def get_ticket(self, ticket_id: str) -> Optional[Ticket]:
-        """
-        Retrieve a ticket by ID (returns the most recent version).
-        
-        Args:
-            ticket_id: Ticket ID to retrieve
-            
-        Returns:
-            Ticket if found, None otherwise
-        """
-        if not self.tickets_file.exists():
+        """Persist ticket snapshot both as run-local ticket.json and global JSONL."""
+        run_dir = self._run_dir(ticket.run_id)
+        ticket_path = run_dir / "ticket.json"
+        ticket_path.write_text(ticket.to_json(pretty=True), encoding="utf-8")
+
+        record = ticket.model_dump(mode="json")
+        record["_saved_at"] = datetime.now(timezone.utc).isoformat()
+        with self.tickets_file.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+        logger.info("Saved ticket snapshot run_id=%s state=%s", ticket.run_id, ticket.state)
+
+    def get_run_ticket(self, run_id: str) -> Ticket | None:
+        """Load the latest run-local ticket.json for a run_id."""
+        ticket_path = self.runs_dir / run_id / "ticket.json"
+        if not ticket_path.exists():
             return None
-        
-        # Read from end to find most recent
-        tickets = []
-        with open(self.tickets_file, "r", encoding="utf-8") as f:
-            for line in f:
-                if line.strip():
-                    try:
-                        data = json.loads(line)
-                        if data.get("ticket_id") == ticket_id:
-                            tickets.append(data)
-                    except json.JSONDecodeError:
-                        continue
-        
-        if not tickets:
-            return None
-        
-        # Return most recent (last in file)
-        latest = tickets[-1]
-        # Remove internal fields
-        latest.pop("_saved_at", None)
-        return Ticket(**latest)
-    
+        return Ticket.from_json(ticket_path.read_text(encoding="utf-8"))
+
     def save_event(
         self,
+        *,
         run_id: str,
         event_type: str,
         state: str,
         details: dict | None = None,
     ) -> None:
-        """
-        Save an event to storage.
-        
-        Args:
-            run_id: Run identifier
-            event_type: Type of event (e.g., "gate_passed", "transition", "tool_call")
-            state: Current state
-            details: Additional event details
-        """
+        """Append a structured event to global and run-local event logs."""
         event = {
             "run_id": run_id,
             "event_type": event_type,
             "state": state,
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "details": details or {},
         }
-        
-        with open(self.events_file, "a", encoding="utf-8") as f:
-            f.write(json.dumps(event, default=str) + "\n")
-        
-        logger.info(f"Event saved: run_id={run_id}, type={event_type}, state={state}")
+
+        with self.events_file.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(event, ensure_ascii=False) + "\n")
+
+        run_events = self._run_dir(run_id) / "events.jsonl"
+        with run_events.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(event, ensure_ascii=False) + "\n")
+
+        logger.info("Saved event run_id=%s type=%s state=%s", run_id, event_type, state)
